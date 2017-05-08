@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Study Buddy</title>
+   <!-- to get rid of favicon request in console -->
+  <link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
+  <link rel="stylesheet" type="text/css" href="css/style.css"> 
+  <link href="https://fonts.googleapis.com/css?family=Josefin+Sans" rel="stylesheet">
+
+  <!-- SOCKET STUFF -->
+  <script type="text/javascript" src="/socket.io/socket.io.js"></script>
+  <script src="http://cdn.peerjs.com/0.3/peer.min.js"></script>
+  <script type="text/javascript">
+
+  var socket = io.connect();
+    //connection happens when page loads
+  socket.on('connect', function() {
+       
+    });
+
+  var roomN=""; //Store room name
+  var expectedans="";
+  var userN=""; //Store user name
+  var q;
+  var asker;
+  //Generate and store user color
+  var r=Math.floor((Math.random() * 255));
+  var g=Math.floor((Math.random() * 255));
+  var b=Math.floor((Math.random() * 255));
+  var questNum; //Keep track of question
+  var quizzes=[]; //Store expected answers
+  var quests=[]; //Store questions
+  var askers=[]; //Store asker of questions
+
+  //set room name
+  function setName(){
+      roomN= document.getElementById("name").value; //get room name
+      // console.log(roomN);
+      document.getElementById("name").value=""; //clear input box
+      socket.emit('room', roomN); //emit room name
+      document.getElementById("room").innerHTML="Current Room: "+roomN; //display room name on page
+    }
+
+  //set user name
+  function setUser(){
+      userN=document.getElementById("userName").value; //get user name
+      document.getElementById("userName").value=""; //clear input field
+      // console.log("Welcome "+"<span style='color:rgb("+r+","+g+","+b+")'>"+userN+"</span>!"); 
+
+      //diplay user name and color via html
+      document.getElementById("WelcomeName").innerHTML="Welcome "+"<span style='color:rgb("+r+","+g+","+b+")'>"+userN+"</span>!";
+  }
+
+  // display chat message
+  socket.on('chatmessage', function (data) {
+    // display chat message from user who sent the message
+    if(data.user==userN){
+      // display message with html and write in user's color
+      var dataString="<p class='myStyle' style='color:rgb("+r+","+g+","+b+")'>You: "+data.message+"</p>";
+      console.log(dataString);
+      document.getElementById('messages').innerHTML+=dataString;
+    }
+    // display chat message from other users
+    else{
+      // display message using html 
+      // get color and username info from socket data being sent
+      var dataString="<p class='otherStyle' style='color:rgb("+data.r+","+data.g+","+data.b+")'>"+data.user+": "+data.message+"</p>";
+      console.log(dataString);
+      document.getElementById('messages').innerHTML+=dataString;
+    }
+    //update scroll so most recent messages are viewable
+    scrollEnd();
+    
+  });
+
+  socket.on('quizmessage', function (message) {
+    // console.log("question number is "+message.questNum);
+
+    // display question to everyone except the person that asked it
+    if(message.data.asker!=userN){
+      //store the expected answer and question
+      quizzes[message.questNum]=message.data.expectedans;
+      quests[message.questNum]=message.data.quest;
+
+      q=message.data.quest;
+      asker=message.data.asker;
+      questNum=message.questNum;
+
+      // display the question in a form with the asker's username, color, and question
+      document.getElementById('quiz').innerHTML+='<form id="quest'+questNum+'" onsubmit="return false"><span style="color:rgb('+message.data.r+","+message.data.g+","+message.data.b+')">'+message.data.asker+"</span> asked "+
+        message.data.quest+ '<br> <input type="text" name="question" id="ask'+questNum+'"><br> <input class="button questStyle" type="button" onclick="ans(document.getElementById('+"'ask"+questNum+"').value,"+questNum+');" value="submit"></form>';
+
+      //update scroll so most recent messages are viewable
+      scrollEnd();
+    }
+
+    //update scroll so most recent messages are viewable
+    scrollEnd();
+  });
+
+
+  //when someone submits the correct answer
+  socket.on('correctans', function(data){
+    //affects everyone except the asker
+    if(data.asker!=userN){
+      // console.log("userN is "+userN);
+      
+      //removes the form so no one else can answer the question
+      var questId="quest"+data.questId;
+      // console.log("Inside correctans removing " + questId);
+      document.getElementById('quiz').removeChild(document.getElementById(questId));
+    }
+
+    console.log(quests);
+
+    //displays a message notifying everyone that the question was answered
+    document.getElementById('quiz').innerHTML+="<p><span class='userStyle' style='color:rgb("+data.r+","+data.g+","+data.b+")'>"+data.name+"</span> answered "+data.que+" correctly! The answer is "+ data.ans+ "</p>";
+  });
+
+  function ask(data){
+    
+    console.log(data);
+
+    //makes sure user entered a room and username
+    if(checkRoom() && checkName()){
+      //send question to other users
+      sendquest(data);
+
+      //display the question asked
+      document.getElementById('quiz').innerHTML+="<p>You asked: "+data+" The expected answer is "+document.getElementById('expectans').value+"</p>";
+
+      //clear input fields
+      document.getElementById('question').value="";
+      document.getElementById('expectans').value="";
+    }
+    else if(!checkRoom()){
+      alert("Please enter a room");
+    }
+    else if(!checkName()){
+      alert("Please enter a username");
+    }
+
+  };
+
+  var sendmessage = function(message) {
+    console.log("chatmessage: " + message);
+
+    //makes sure that user has entered a room and username 
+    if(checkRoom() && checkName()){
+      console.log("sendmessage");
+      //sends message, who sent it, and their color
+      socket.emit('chatmessage', {
+        'message': message,
+        'user':userN,
+        'r':r,
+        'g':g,
+        'b':b
+      });
+
+      //clear input field
+      document.getElementById('message').value="";
+    }
+    else if(!checkRoom()){
+      alert("Please enter a room");
+    }
+    else if(!checkName()){
+      alert("Please enter a username");
+    }
+    
+  };
+
+  var sendquest = function(message) {
+    // console.log("chatmessage: " + message);
+    expectedans=document.getElementById('expectans').value;
+    // send question with answer, who asked it, their username, and color
+    socket.emit('quizmessage', {
+      'quest':message,
+      'expectedans':expectedans,
+      'asker':userN,
+      'r':r,
+      'g':g,
+      'b':b
+      });
+
+    // clear input value after submit is clicked
+    // reset the value of the input
+    document.getElementById('quiz').value+="";
+  };
+
+  function ans(data, questId){
+    // alert(data);
+    // console.log(userN);
+    // console.log("question number is "+questId);
+    if(checkName()){
+      //check for correct answer
+      if(data==quizzes[questId]){
+        //send the correctly answered question, the question number, who ansered it and their color
+        socket.emit('correct', {
+          'name': userN,
+          'ans': data,
+          'que': quests[questId],
+          'asker':asker,
+          'questId':questId,
+          'r': r,
+          'g':g,
+          'b':b
+        });
+        var questd="quest"+questId;
+        // console.log("Inside ans removing " + questd);
+
+        //remove the form of the correctly answered question
+        document.getElementById('quiz').removeChild(document.getElementById(questd));
+        console.log(quests);
+
+        //display that the user got the question correct
+        document.getElementById('quiz').innerHTML+='<p><span style="color:rgb('+data.r+","+data.g+","+data.b+')">You</span> got the question, ' +quests[questId]+" correct</p>";
+      }
+      else{
+        // user got the question wrong
+        alert("Incorrect. Please Try Again.");
+      }
+    }
+    else{
+      alert("Please enter a username");
+    }
+    
+  };
+
+  // checks if the user is in a room
+  function checkRoom(){
+    if (roomN==""){
+      return false;
+    }
+    else{
+      return true;
+    }
+  }
+
+  // checks if the user inputed a username
+  function checkName(){
+    if (userN==""){
+      return false;
+    }
+    else{
+      return true;
+    }
+  }
+
+  // updates the scroll of the messages and quiz boxes
+  function scrollEnd(){
+    document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
+    document.getElementById("quiz").scrollTop = document.getElementById("quiz").scrollHeight;
+  }
+
+    
+  </script>
+</head>
+<body>
+  <!-- Welcome messages -->
+  <p id="WelcomeName">Welcome to Study Buddy!</p>
+  <p id="room">Please Enter a Room</p>
+
+  <!-- Input for username and room name -->
+  <form id="userStyle" onsubmit="setUser(); return false;">
+    User Name: <input type="text" id="userName">
+    <input class="button" type="button" onclick="setUser()" value="submit">
+  </form>
+
+  <form id="rmname" onsubmit="setName(); return false;">
+        Room: <input type="text" name="Rname" id="name">
+        <input class="button" type="button" onclick="setName()" value="submit">
+  </form>
+
+  <!-- Content area for chat and quiz questions -->
+  <div id="content">
+  <p class="chatheader contenthead">Chat</p>
+  <p class="quizheader contenthead">Quiz</p>
+   <div id="messages"> </div>
+   <div id="quiz"> </div>
+ </div>
+  <br>
+
+  <!-- Input field for chat -->
+  <form id="chat" onsubmit="sendmessage(document.getElementById('message').value); return false;">
+    <input type="text" id="message" placeholder="send a message" name="message">
+       <input class="button" type="button" value="submit" onclick="sendmessage(document.getElementById('message').value)">
+  </form>
+  
+  <!-- Input field for quiz questions -->
+  <form id="quizme" onsubmit="ask(document.getElementById('question').value); return false;">
+    <input type="text" id="question" placeholder="quiz someone" name="question">
+        <input type="text" id="expectans" placeholder="expected answer" name="expectans">
+       <input class="button" type="button" value="submit" onclick="ask(document.getElementById('question').value);">
+  </form>
+   <br>
+  
+</body>
+</html>

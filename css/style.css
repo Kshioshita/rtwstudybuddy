@@ -1,0 +1,107 @@
+body{
+	box-sizing: border-box;
+	font-family: 'Josefin Sans', sans-serif;
+	
+}
+#content{
+  	width: 100%;
+  	height: 400px;
+
+}
+#messages{
+	border: dashed;
+	border-right:0px; 
+	background-color: rgba(255, 255, 255, .2);
+	width: 50%;
+	display: inline-block;
+	float: left;
+	height: 400px;
+	box-sizing: border-box;
+	padding-left: 1em;
+	overflow: scroll;
+	background: url('../img/background.png') 50% 50% no-repeat;
+  	background-size: cover;
+  	clear: left;
+}
+
+#quiz{
+	background-color: rgba(255, 255, 255, .5);
+	border: dashed;
+	width: 50%;
+	display: inline-block;
+	float: left;
+	height: 400px;
+	box-sizing: border-box;
+	padding-left: 1em;
+	overflow: scroll;
+	background: url('../img/background.png') 50% 50% no-repeat;
+  	background-size: cover;
+
+}
+#rmname{
+	margin-bottom: 5px;
+}
+#quizme{
+	display: inline-block;
+	float: right;
+}
+
+#chat{
+	display: inline-block;
+}
+
+.button{
+	border:none;
+	text-decoration: none;
+	/*background: #f4f4f4;*/
+	background: rgba(0, 0, 0, .1);
+	width: 60px;
+	height: 20px;
+	border-radius: 4px;
+	
+}
+
+.button:hover{
+	background: #eee;
+}
+
+form{
+	margin: 5px 0 0 0;
+}
+
+#WelcomeName{
+	font-size: 2em;
+	text-align: center;
+	margin-top: 20px;
+    margin-bottom: 0;
+}
+
+#room{
+	font-size: 1.75em;
+	text-align: center;
+	margin-top: 10px;
+	margin-bottom: 0;
+}
+
+.questStyle{
+	margin: 2px 0 0 0;
+}
+
+#qu{
+	margin: 10px 0;
+}
+
+.contenthead{
+	display: inline-block;
+	float: left;
+	margin: 0;
+	font-size: 1.5em;
+	font-weight: 700;
+}
+
+.quizheader{
+	float: right;
+	margin-right: 5px;
+}
+
+
